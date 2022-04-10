@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="stylesheet.css">
+    <link rel="stylesheet" href="d3-context-menu.css">
+    <title>Logic Editor</title>
+  </head>
+  <body onload="onLoad()">
+        <main>
+            <div class = "header" id="navigationBar" name="navigationBar">
+                <input class="textInput" type="text" id="term" name="term" placeholder="(a and b) or c"/>
+                <input class="moduleButton" type="button" id="drawButton" value="Draw" onclick="deserializeLogic()"/>  
+                <div class="dropdown">
+                    <button class="dropdownButton" onclick="dropdownMenu(1)">Logic Elements</button>
+                    <div class="dropdown-content" id="myDropdownLogic">
+                      <a onclick="place(new INPUT(10,20))">Input</a>
+                      <a onclick="place(new AND(110,10))">AND</a>
+                      <a onclick="place(new NAND(110,10))">NAND</a>
+                      <a onclick="place(new OR(110,10))">OR</a>
+                      <a onclick="place(new NOR(110,10))">NOR</a>
+                      <a onclick="place(new NOT(110,20))">NOT</a>
+                      <a onclick="place(new OUTPUT(300,20))">Output</a>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="dropdownButton" id="dropdownButton" onclick="dropdownMenu(2)">Save as</button>
+                    <div class="dropdown-content" id="myDropdownSave">
+                      <a onclick="pushToURL()">URL</a>
+                      <a onclick="copyText()">Clipboart</a>
+                      <a onclick="saveTxt()">.txt-file</a>
+                    </div>
+                </div>
+                <input type="checkbox" id="deleteCheckbox" onchange="toggleDelete()"/>
+                <label class="moduleButton" id="deleteButton" for="deleteCheckbox">Delete</label>
+                <input class="moduleButton" type="button" value="+" onclick="zoomIn()"/>
+                <input class="moduleButton" type="button" value="-" onclick="zoomOut()"/>
+            </div>
+            <div class="space" id="space"> </div>
+            <div class="frame" id="simulationBox" name="simulationBox">
+            </div>
+            <div class="dropdown" id="navigationMenu">
+                <div class="dropdown-content" id="myDropdownMenu">
+                  <a onclick="toggleNavigationBar(true)">Show/Hide</a>
+                  <a onclick="zoomIn()">Zoom+</a>
+                  <a onclick="zoomOut()">Zoom-</a>
+                  <a onclick="about()">About</a>
+                </div>
+            </div>
+        </main>
+  </body>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="d3-context-menu.js"></script>
+  <script src="parser.js"></script>
+  <script src="script.js"></script> 
+</html>
