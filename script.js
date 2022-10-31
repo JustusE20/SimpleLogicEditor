@@ -1,10 +1,12 @@
 /* v1.0.5 by Konstantin Fuchs
 *  v2.0.6 by Wiebke Albers
+*  v3.0.1 by Justus Epperlein
 */
 
 var globalDeleteActive = false;
-var colorSelected = "orange";
+var colorActive = "orange";
 var colorStandard = "black";
+var colorSelected = "lightgrey";
 var colorConnectionPoints = "#38393d";
 var viewZoom = 0;
 var realZoom = 1000;
@@ -15,6 +17,10 @@ var statusNavigationBar = true;
 var widthNavBar = document.getElementById("navigationBar").clientHeight;
 var width = 100;
 var height = 90;
+var select = document.getElementById("select"); //J.E.
+var selectionArea = [0, 0, 0, 0]; //J.E.
+var renaming = false; // J.E.
+var newName = ""; //J.E.
 
 
 //#region prototype additional functions
@@ -89,7 +95,7 @@ window.onclick = function(event) {
  * Shows developer information
  */
 function about(){
-    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
+    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.1 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
 }
 
 /** K.F./W.A.
@@ -199,7 +205,7 @@ function toggleNavigationBar(toggle){
  * @param {Object} element the d3 selection of the element to be highlighted
  */
 function showError(element) {
-    element.transition().duration(500).style("background-color", colorSelected);
+    element.transition().duration(500).style("background-color", colorActive);
     element.transition().duration(500).delay(500).style("background-color", "white");
 }
 
@@ -231,6 +237,76 @@ function zoomOut() {
     viewZoom -= 50;
     realZoom += 50;
     d3.select("#svg").attr("viewBox", "0 0 " + realZoom + " 100");
+}
+
+/** J.E.
+ * selection of an area on the canvas
+*/
+onmousedown = function(e) {
+    if(e.clientY > (widthNavBar + 10) && !e.target.matches('.dropdown-content a')  && !e.target.matches('.d3-context-menu ul li') && e.button === 0) {
+        select.hidden = 0;
+        selectionArea[0] = e.clientX - 10;
+        selectionArea[1] = e.clientY - 65;
+        selectionArea[2] = e.clientX - 10;
+        selectionArea[3] = e.clientY - 65;
+        drawSelection();
+    }
+};
+onmousemove = function(e) {
+    if(select.hidden == 0) {
+        selectionArea[2] = e.clientX - 10;
+        if(e.clientY > (widthNavBar + 15)) {
+            selectionArea[3] = e.clientY - 65;
+        } else {
+            selectionArea[3] = widthNavBar - 50;
+        }
+        drawSelection();
+    }
+};
+onmouseup = function(e) {
+    select.hidden = 1;
+    selectionArea = [0, 0, 0, 0];
+};
+function drawSelection() { //Draws selection box and marks the modules inside the area
+    var x3 = Math.min(selectionArea[0],selectionArea[2]);
+    var x4 = Math.max(selectionArea[0],selectionArea[2]);
+    var y3 = Math.min(selectionArea[1],selectionArea[3]);
+    var y4 = Math.max(selectionArea[1],selectionArea[3]);
+    select.style.left = x3 + 'px';
+    select.style.top = y3 + 'px';
+    select.style.width = x4 - x3 + 'px';
+    select.style.height = y4 - y3 + 'px';
+
+    var moduleList = new ModuleManager().getModuleList();
+    for(var i=0; i < moduleList.length; i++) {
+        var element = moduleList[i];
+        if(x3 < element.getX() && element.getX() < x4 && y3 < element.getY() && element.getY() < y4) {
+            element.group.select("rect").attr("fill", colorSelected);
+            element.selected = true;
+        } else {
+            element.group.select("rect").attr("fill", "transparent");
+            element.selected = false;
+        }
+    }
+}
+
+/** J.E.
+ * return Array of single selected module or all marked modules
+ * @param {Module} module the selected module
+ */
+function getSelection(module) {
+    var selectionList = new Array();
+    if(module.selected) {
+        var moduleList = new ModuleManager().getModuleList();
+        for(var i=0; i < moduleList.length; i++) {
+            if(moduleList[i].selected) {
+                selectionList.push(moduleList[i]);
+            }
+        }
+    } else {
+        selectionList.push(module);
+    }
+    return selectionList;
 }
 
 ///////// Begin save logic with button
@@ -401,7 +477,7 @@ function changeModuleID(listModulesOld){
  * initiates the process of drawing the equation
  * @param {String} text the raw text that was entered and is to be drawn 
  */
-function draw(text) {
+function draw(text) {draw
     var parser = new Parser(text);
     var variables = parser.getVariables()
     var inputList = new Array(variables.length);
@@ -416,7 +492,7 @@ function draw(text) {
             inputList[i] = place(input);
         }
 
-        //drwaing all modules
+        //drawing all modules
         lastElement = buildEquation(variables, parser.getEquation(), inputList, buffer);
 
         //drawing the output
@@ -490,17 +566,27 @@ function buildEquation(variables, equation, inputList, buffer) {
     var module = null;
     var input;
     switch (equationMerge[1]) {
-        case "&":
+        case "ᴧ":
             module = place(new AND(110, 10, 2));
             break;
-
-        case "|":
+        case "↑":
+            module = place(new NAND(110, 10, 2));
+            break;
+        case "ᴠ":
             module = place(new OR(110, 10, 2));
             break;
-
-        case "!":
+        case "↓":
+            module = place(new NOR(110, 10, 2));
+            break;            
+        case "¬":
             module = place(new NOT(110, 10, 2));
             break;
+        case "⊕":
+            module = place(new XOR(110, 10, 2));
+        break; 
+        case "⊙":
+            module = place(new XNOR(110, 10, 2));
+        break;        
     }
 
     if (module != null) {
@@ -578,23 +664,39 @@ function isTouching(element) {
     return false;
 }
 
+/** J.E.
+ * debugging function, temporarily
+ */
+function debug() {
+/*    var moduleList = new ModuleManager().getModuleList();
+    for(var i = 0; i < moduleList.length; i++) {
+        moduleList[i].group.select("rect").attr("fill", "transparent");
+    }
+    for(var j = 0; j < selectionList.length; j++) {
+        selectionList[j].group.select("rect").attr("fill", colorSelected);
+    }*/
+}
+
 /** K.F.
  * lets the given module and its connections follow the movement of the mouse
- * @param {Module} module the module to be moved
+ * @param {Array} modules selection of modules to be moved
  */
-function dragMove(module) {
+function dragMove(modules) {
     var dx = d3.event.dx;
     var dy = d3.event.dy;
-    module.dMove(dx, dy);
-    if (module.output.length > 0) {
-        for (var i = 0; i < module.output.length; i++) {
-            module.output[i].dMoveStart(dx, dy);
+    for(var h = 0; h < modules.length; h++) {
+        module = modules[h];
+        module.dMove(dx, dy);
+        if (module.output.length > 0) {
+            for (var i = 0; i < module.output.length; i++) {
+                module.output[i].dMoveStart(dx, dy);
+            }
         }
-    }
-    if (module.input.length > 0) {
-        for (var i = 0; i < module.input.length; i++) {
-            for (var j = 0; j < module.input[i].length; j++) {
-                module.input[i][j].dMoveEnd(dx, dy);
+        if (module.input.length > 0) {
+            for (var i = 0; i < module.input.length; i++) {
+                for (var j = 0; j < module.input[i].length; j++) {
+                    module.input[i][j].dMoveEnd(dx, dy);
+                }
             }
         }
     }
@@ -608,6 +710,16 @@ function dragConnection(connection) {
     var dx = d3.event.dx;
     var dy = d3.event.dy;
     connection.dMoveEnd(dx, dy);
+}
+
+/** J.E.
+ * deletion of all modules inside an array
+ * @param {Array} modules the connection to be moved
+ */
+ function deleteSelection(modules) {
+    for(var i = 0; i < modules.length; i++) {
+        modules[i].delete();
+    }
 }
 
 /** K.F.
@@ -684,6 +796,18 @@ function menuLogic(element) {
                             },
                         },
                         {
+                            title: "XOR",               // J.E.
+                            action: function () {
+                                element.replace(new XOR(element.x, element.y, element.maxInputCount), element.id);
+                            },
+                        },
+                        {
+                            title: "XNOR",               // J.E.
+                            action: function () {
+                                element.replace(new XNOR(element.x, element.y, element.maxInputCount), element.id);
+                            },
+                        },
+                        {
                             title: "NOT",
                             action: function () {
                                 element.replace(new NOT(element.x, element.y), element.id);
@@ -746,12 +870,18 @@ function menuLogic(element) {
                     ],
             },
             {
+                title: "rename",               // J.E.
+                action: function () {
+                    element.renameModule(element.constructor.name, element.x, element.y, element.id);
+                },
+            },
+            {
                 divider: true,
             },
             {
                 title: 'delete',
                 action: function () {
-                    element.delete();
+                    deleteSelection(getSelection(element)); //J.E.
                 }
             }
         ];
@@ -776,7 +906,9 @@ class Parser {
         this.input;
         this.vars;
         try {
-            this.array = checkInputOnEquals(text);
+            this.input = changeOperator(text);
+            this.input = changeSpaces(this.input);
+            this.array = checkInputOnEquals(this.input);
             this.input = removeResultName(this.array);
             this.vars = varFilter(this.input);
             this.vars.pop();
@@ -797,7 +929,7 @@ class Parser {
         //convert string to an array, combine variables
         var equation = new Array();
         var variableList = new Array();
-        var delimiter = [" ", "(", ")", "&", "|", "!", "=", "^"];
+        var delimiter = [" ", "(", ")", "ᴧ", "ᴠ", "¬", "⊕", "⊙", "↑", "↓", "="];
         var variable;
         for (var i = 0; i < text.length; i++) {
             if (delimiter.includes(text[i])) {
@@ -834,11 +966,11 @@ class Parser {
      * @param {String[]} equation 
      */
     addBrackets(equation) {
-        var delimiter = [" ", "(", ")", "&", "|", "!", "=", "^"];
+        var delimiter = [" ", "(", ")", "ᴧ", "ᴠ", "¬", "⊕", "⊙", "↑", "↓", "="];
 
         //handle ! (NOT)
         for (var i = 0; i < equation.length; i++) {
-            if (equation[i] == "!") {
+            if (equation[i] == "¬") {
                 if (equation[i + 1] == "(") {
                     var openBrackets = 0;
                     for (var j = i; j < equation.length; j++) {
@@ -847,7 +979,7 @@ class Parser {
                         }
                         if (equation[j] == ")") {
                             if (openBrackets == 1) {
-                                equation.splice(j + 1, 0, "!");
+                                equation.splice(j + 1, 0, "¬");
                                 equation.splice(j + 2, 0, ")");
                                 equation.splice(i, 1, "(");
                                 break;
@@ -890,7 +1022,7 @@ class Parser {
 
         //handle & (AND)
         for (var i = 0; i < equation.length; i++) {
-            if (equation[i] == "&") {
+            if (equation[i] == "ᴧ") {
                 if (equation[i - 1] != ")") {
                     equation.splice(i - 1, 0, "(");
                     i++;
@@ -937,7 +1069,7 @@ class Parser {
 
         // handle | (OR)
         for (var i = 0; i < equation.length; i++) {
-            if (equation[i] == "|") {
+            if (equation[i] == "ᴠ") {
                 if (equation[i - 1] != ")") {
                     equation.splice(i - 1, 0, "(");
                     i++;
@@ -1157,6 +1289,7 @@ class Module {
         this.text = '';
         this.negation = false;
         this.value = false;
+        this.selected = false; //J.E.
         new ModuleManager().addModule(this);
     }
 
@@ -1221,8 +1354,8 @@ class Module {
         {
             this.value = true;
 
-            this.group.select("text").attr("fill", colorSelected);
-            this.group.select("rect").attr("stroke", colorSelected);
+            this.group.select("text").attr("fill", colorActive);
+            this.group.select("rect").attr("stroke", colorActive);
 
             this.group.append("circle")
                 .attr("cx", this.width + 5)
@@ -1241,7 +1374,7 @@ class Module {
                 .attr("fill", colorConnectionPoints)
                 .attr("stroke", "transparent")
                 .attr("stroke-width", this.sizeStrokeWidth)
-                .on("mouseover", function () { d3.select(this).attr("fill", colorSelected).attr("stroke", colorSelected) })
+                .on("mouseover", function () { d3.select(this).attr("fill", colorActive).attr("stroke", colorActive) })
                 .on("mouseout", function () { d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", "transparent") })
                 .call(d3.drag()
                     .on("start", function () {
@@ -1281,12 +1414,12 @@ class Module {
         }
         this.group.selectAll(".input")
             .data(inputIndexList)
-            .on("mouseover", function (d) { new EventManager().setEventElement(thisElement, d); d3.select(this).attr("fill", colorSelected).attr("stroke", colorSelected) })
+            .on("mouseover", function (d) { new EventManager().setEventElement(thisElement, d); d3.select(this).attr("fill", colorActive).attr("stroke", colorActive) })
             .on("mouseout", function (d) { new EventManager().setEventElement(null, d); d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", "transparent") });//input[0]
 
         this.group.attr('transform', 'translate(' + this.x + ',' + this.y + ')');
         this.group.on("contextmenu", function () { d3.event.preventDefault(); menuLogic(thisElement) });
-        this.group.call(d3.drag().on('drag', function () { dragMove(thisElement) }));
+        this.group.call(d3.drag().on('drag', function () { dragMove(getSelection(thisElement)) }));
         if (activatable) 
         {
             this.group.on("click", function () 
@@ -1381,8 +1514,8 @@ class Module {
                     this.output[i].setValue(true);
                 }
             }
-            this.group.select("text").attr("fill", colorSelected);
-            this.group.select("rect").attr("stroke", colorSelected);
+            this.group.select("text").attr("fill", colorActive);
+            this.group.select("rect").attr("stroke", colorActive);
         }
         else {
             this.value = false;
@@ -1465,6 +1598,22 @@ class Module {
     addOutput(element) {
         this.output.push(element);
     }
+
+        /** J.E.
+     * enables renaming of an OUTPUT or INPUT
+     * @param {string} classname name of the modul's subclass
+     * @param {number} x x position of module
+     * @param {number} y y position of module
+     * @param {number} inputCount new number of the module's inputs
+     */
+    renameModule(classname, x, y, oldID) {
+        if(classname == "INPUT" || classname == "OUTPUT") {
+            var name = window.prompt("Rename selected elemented to...", "");
+            eval("this.replace(new " + classname + "(x, y, name), oldID);");
+        } else {
+            window.alert("Only Inputs and Outputs can be renamed, consider using replace option.");
+        }
+    }
 }
 
 /** K.F./W.A.
@@ -1490,12 +1639,10 @@ class AND extends Module {
         this.maxOutputCount = 1;
         this.width = 30;
         this.height = 50;
-        this.text = "&";
-        this.negation = false;
 
         this.calcOutputOffset(false);                       
         this.calcInputOffset();                             
-        this.build(this.text, this.negation);
+        this.build("&", false);
         this.addsInputToArray();                                
     }
 
@@ -1657,6 +1804,94 @@ class NOR extends Module {
     }
 }
 
+/** J.E.
+ * implements a Module as an XOR module
+ */
+ class XOR extends Module {
+    /**
+     * sets all variables for an XOR module 
+     * @param {number} x the x position in which the module is to be set
+     * @param {number} y the y position in which the module is to be set
+     * @param {number} inputCount the number of inputs is to be set
+     */
+    constructor(x, y, inputCount)                             
+    {
+        super(x, y);
+
+        if (!inputCount)                                     
+        {
+            inputCount = 2;
+        }
+
+        this.maxInputCount = inputCount;                    
+        this.maxOutputCount = 1;
+        this.width = 30;
+        this.height = 50;
+
+        this.calcOutputOffset(false);                        
+        this.calcInputOffset();                             
+        this.build("=1", false);
+        this.addsInputToArray();                            
+    }
+
+    checkActivated() {
+        var activate = false;
+
+        for (var i = 0; i < this.input.length; i++) {
+            for (var j = 0; j < this.input[i].length; j++) {
+                if (this.input[i][j].value) {
+                    activate = !activate;
+                }
+            }
+        }
+        this.activateInactivate(activate);                   
+    }
+}
+
+/** J.E.
+ * implements a Module as an XNOR module
+ */
+ class XNOR extends Module {
+    /**
+     * sets all variables for an XNOR module 
+     * @param {number} x the x position in which the module is to be set
+     * @param {number} y the y position in which the module is to be set
+     * @param {number} inputCount the number of inputs is to be set
+     */
+    constructor(x, y, inputCount)                             
+    {
+        super(x, y);
+
+        if (!inputCount)                                     
+        {
+            inputCount = 2;
+        }
+
+        this.maxInputCount = inputCount;                    
+        this.maxOutputCount = 1;
+        this.width = 30;
+        this.height = 50;
+
+        this.calcOutputOffset(true);                        
+        this.calcInputOffset();                             
+        this.build("=1", true);
+        this.addsInputToArray();                            
+    }
+
+    checkActivated() {
+        var activate = true;
+
+        for (var i = 0; i < this.input.length; i++) {
+            for (var j = 0; j < this.input[i].length; j++) {
+                if (this.input[i][j].value) {
+                    activate = !activate;
+                }
+            }
+        }
+        this.activateInactivate(activate);                    
+    }
+}
+
 /** K.F./W.A.
  * implements a Module as an NOT module
  */
@@ -1733,8 +1968,8 @@ class OUTPUT extends Module {
         }
         if (activate) {
             this.value = true;
-            this.group.select("rect").attr("stroke", colorSelected);
-            this.group.select("text").attr("fill", colorSelected);
+            this.group.select("rect").attr("stroke", colorActive);
+            this.group.select("text").attr("fill", colorActive);
         }
         else {
             this.value = false;
@@ -1774,8 +2009,8 @@ class INPUT extends Module {
 
     checkActivated() {
         if (!this.value) {
-            this.group.select("rect").attr("stroke", colorSelected);
-            this.group.select("text").attr("fill", colorSelected);
+            this.group.select("rect").attr("stroke", colorActive);
+            this.group.select("text").attr("fill", colorActive);
             this.value = true;
             for (var i = 0; i < this.output.length; i++) {
                 this.output[i].setValue(true);
@@ -1822,8 +2057,8 @@ class CONNECTION {
             .attr("stroke", colorStandard)
             .attr("fill", "transparent")
             .attr("stroke-width", "1px")
-            .on("mouseover", function () { if (thisElement.output != null) { d3.select(this).attr("stroke-width", "3px"); if (thisElement.value) { d3.select(this).attr("stroke", colorSelected) } else { d3.select(this).attr("stroke", colorConnectionPoints) } } })
-            .on("mouseout", function () { d3.select(this).attr("stroke-width", "1px"); if (thisElement.value) { d3.select(this).attr("stroke", colorSelected) } else { d3.select(this).attr("stroke", colorStandard) } })
+            .on("mouseover", function () { if (thisElement.output != null) { d3.select(this).attr("stroke-width", "3px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorConnectionPoints) } } })
+            .on("mouseout", function () { d3.select(this).attr("stroke-width", "1px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorStandard) } })
             .on("contextmenu", function () { d3.event.preventDefault(); thisElement.delete(true) })
             .on("click", function () { if (globalDeleteActive) { thisElement.delete(true) } });
         this.path.moveToBack();
@@ -1938,7 +2173,7 @@ class CONNECTION {
         try {
             if (value != this.value) {
                 if (value) {
-                    this.path.attr("stroke", colorSelected);
+                    this.path.attr("stroke", colorActive);
                 }
                 else {
                     this.path.attr("stroke", colorStandard);
@@ -1961,6 +2196,42 @@ class CONNECTION {
      */
     setOutputInputIndex(index) {
         this.outputInputIndex = index;
+    }
+}
+
+/** J.E.
+ * implements a Module as an JUNCTION module
+ */
+ class JUNCTION extends Module {
+    /**
+     * sets all variables for an JUNCTION module 
+     * @param {number} x the x position in which the module is to be set
+     * @param {number} y the y position in which the module is to be set
+     */
+    constructor(x, y) {
+        super(x, y);
+
+        this.maxInputCount = 1;
+        this.maxOutputCount = 1;
+        this.width = 10;
+        this.height = 0;
+
+        this.calcOutputOffset(false);                        
+        this.calcInputOffset();                             
+        this.build("", false);
+        this.addsInputToArray();                            
+    }
+
+    checkActivated() {
+        var activate = false;
+        for (var i = 0; i < this.input.length; i++) {
+            for (var j = 0; j < this.input[i].length; j++) {
+                if (this.input[i][j].value) {
+                    activate = true;
+                }
+            }
+        }
+        this.activateInactivate(activate);                  
     }
 }
 

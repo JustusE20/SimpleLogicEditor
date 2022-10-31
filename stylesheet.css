@@ -72,6 +72,10 @@ html
     height: 85vh;
     margin: auto;
 }
+#select {
+    border: 1px dotted #000;
+    position: absolute;
+}
 
 #svg
 {

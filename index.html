@@ -20,6 +20,8 @@
                       <a onclick="place(new NAND(110,10))">NAND</a>
                       <a onclick="place(new OR(110,10))">OR</a>
                       <a onclick="place(new NOR(110,10))">NOR</a>
+                      <a onclick="place(new XOR(110,10))">XOR</a>
+                      <a onclick="place(new XNOR(110,10))">XNOR</a>
                       <a onclick="place(new NOT(110,20))">NOT</a>
                       <a onclick="place(new OUTPUT(300,20))">Output</a>
                     </div>
@@ -33,16 +35,19 @@
                     </div>
                 </div>
                 <input type="checkbox" id="deleteCheckbox" onchange="toggleDelete()"/>
+                <input class="moduleButton" type="button" value="DEBUG" onclick="debug()"/>
                 <label class="moduleButton" id="deleteButton" for="deleteCheckbox">Delete</label>
                 <input class="moduleButton" type="button" value="+" onclick="zoomIn()"/>
                 <input class="moduleButton" type="button" value="-" onclick="zoomOut()"/>
             </div>
             <div class="space" id="space"> </div>
             <div class="frame" id="simulationBox" name="simulationBox">
+              <div id="select" hidden></div>
             </div>
             <div class="dropdown" id="navigationMenu">
                 <div class="dropdown-content" id="myDropdownMenu">
                   <a onclick="toggleNavigationBar(true)">Show/Hide</a>
+                  <a onclick="place(new JUNCTION(200,20))">Add Junction</a>
                   <a onclick="zoomIn()">Zoom+</a>
                   <a onclick="zoomOut()">Zoom-</a>
                   <a onclick="about()">About</a>
