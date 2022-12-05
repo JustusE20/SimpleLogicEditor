@@ -1,6 +1,6 @@
 /* v1.0.5 by Konstantin Fuchs
 *  v2.0.6 by Wiebke Albers
-*  v3.0.1 by Justus Epperlein
+*  v3.0.3 by Justus Epperlein
 */
 
 var globalDeleteActive = false;
@@ -18,9 +18,6 @@ var widthNavBar = document.getElementById("navigationBar").clientHeight;
 var width = 100;
 var height = 90;
 var select = document.getElementById("select"); //J.E.
-var selectionArea = [0, 0, 0, 0]; //J.E.
-var renaming = false; // J.E.
-var newName = ""; //J.E.
 
 
 //#region prototype additional functions
@@ -95,7 +92,7 @@ window.onclick = function(event) {
  * Shows developer information
  */
 function about(){
-    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.1 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
+    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.2 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
 }
 
 /** K.F./W.A.
@@ -242,53 +239,67 @@ function zoomOut() {
 /** J.E.
  * selection of an area on the canvas
 */
+var selectionArea = {
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 0,
+
+    drawSelection: function() { //Draws selection box and marks the modules inside the area
+        var x3 = Math.min(this.x1, this.x2);
+        var x4 = Math.max(this.x1, this.x2);
+        var y3 = Math.min(this.y1, this.y2);
+        var y4 = Math.max(this.y1, this.y2);
+        select.style.left = x3 + 'px';
+        select.style.top = y3 + 'px';
+        select.style.width = x4 - x3 + 'px';
+        select.style.height = y4 - y3 + 'px';
+        x3 = x3*realZoom/(realZoom + viewZoom);
+        x4 = x4*realZoom/(realZoom + viewZoom);
+        y3 = y3*realZoom/(realZoom + viewZoom);
+        y4 = y4*realZoom/(realZoom + viewZoom);
+    
+        var moduleList = new ModuleManager().getModuleList();
+        for(var i=0; i < moduleList.length; i++) {
+            var element = moduleList[i];
+            if(x3 < element.getX() && element.getX() < x4 && y3 < element.getY() && element.getY() < y4) {
+                element.group.select("rect").attr("fill", colorSelected);
+                element.selected = true;
+            } else {
+                element.group.select("rect").attr("fill", "transparent");
+                element.selected = false;
+            }
+        }
+    },
+};
 onmousedown = function(e) {
     if(e.clientY > (widthNavBar + 10) && !e.target.matches('.dropdown-content a')  && !e.target.matches('.d3-context-menu ul li') && e.button === 0) {
         select.hidden = 0;
-        selectionArea[0] = e.clientX - 10;
-        selectionArea[1] = e.clientY - 65;
-        selectionArea[2] = e.clientX - 10;
-        selectionArea[3] = e.clientY - 65;
-        drawSelection();
+        selectionArea.x1 = e.clientX - 10;
+        selectionArea.y1 = e.clientY - 65;
+        selectionArea.x2 = e.clientX - 10;
+        selectionArea.y2 = e.clientY - 65;
+        selectionArea.drawSelection();
     }
 };
 onmousemove = function(e) {
     if(select.hidden == 0) {
-        selectionArea[2] = e.clientX - 10;
+        selectionArea.x2 = e.clientX - 10;
         if(e.clientY > (widthNavBar + 15)) {
-            selectionArea[3] = e.clientY - 65;
+            selectionArea.y2 = e.clientY - 65;
         } else {
-            selectionArea[3] = widthNavBar - 50;
+            selectionArea.y2 = widthNavBar - 50;
         }
-        drawSelection();
+        selectionArea.drawSelection();
     }
 };
 onmouseup = function(e) {
     select.hidden = 1;
-    selectionArea = [0, 0, 0, 0];
+    selectionArea.x1 = 0;
+    selectionArea.y1 = 0;
+    selectionArea.x2 = 0;
+    selectionArea.y2 = 0;
 };
-function drawSelection() { //Draws selection box and marks the modules inside the area
-    var x3 = Math.min(selectionArea[0],selectionArea[2]);
-    var x4 = Math.max(selectionArea[0],selectionArea[2]);
-    var y3 = Math.min(selectionArea[1],selectionArea[3]);
-    var y4 = Math.max(selectionArea[1],selectionArea[3]);
-    select.style.left = x3 + 'px';
-    select.style.top = y3 + 'px';
-    select.style.width = x4 - x3 + 'px';
-    select.style.height = y4 - y3 + 'px';
-
-    var moduleList = new ModuleManager().getModuleList();
-    for(var i=0; i < moduleList.length; i++) {
-        var element = moduleList[i];
-        if(x3 < element.getX() && element.getX() < x4 && y3 < element.getY() && element.getY() < y4) {
-            element.group.select("rect").attr("fill", colorSelected);
-            element.selected = true;
-        } else {
-            element.group.select("rect").attr("fill", "transparent");
-            element.selected = false;
-        }
-    }
-}
 
 /** J.E.
  * return Array of single selected module or all marked modules
@@ -384,8 +395,7 @@ function serializeLogic()
                                                 'maxInputCount','maxOutputCount',
                                                 'outputOffset','inputOffset']));
     jsonConnections.push(JSON.stringify(listConnections,['classname','inputID','outputID',
-                                                        'startX','startY','endX','endY',
-                                                        'curve']));
+                                                        'gridPointsX','gridPointsY', 'curve']));
     
     var textLogic = [listModules, listConnections, jsonModules, jsonConnections];
     return textLogic;
@@ -444,7 +454,7 @@ function createConnection(connection, listModulesNew, inputIndex)
     var endObject = listModulesNew.find(obj => obj.id == connection.outputID);
    
     try{
-        connect(startObject, new CONNECTION(0,0,0,0), endObject, inputIndex);
+        connect(startObject, new CONNECTION([0,0,0,0], [0,0,0,0]), endObject, inputIndex);
         startObject.checkActivated();
     }
     catch{
@@ -487,7 +497,7 @@ function draw(text) {draw
     try {
         //drawing all necessary inputs
         for (var i = 0; i < variables.length; i++) {
-            var input = new INPUT(10, 10, variables[i]);
+            var input = new INPUT(15, 15, variables[i]);
             buffer.push(input);
             inputList[i] = place(input);
         }
@@ -497,9 +507,9 @@ function draw(text) {draw
 
         //drawing the output
         if (lastElement != null) {
-            var output = place(new OUTPUT(210, 10, parser.getResult()));
+            var output = place(new OUTPUT(210, 30, parser.getResult()));
             buffer.push(output);
-            connect(lastElement, new CONNECTION(0, 0, 0, 0), output, 0);
+            connect(lastElement, new CONNECTION([0,0,0,0], [0,0,0,0]), output, 0);
             lastElement.checkActivated();
         }
     }
@@ -567,25 +577,25 @@ function buildEquation(variables, equation, inputList, buffer) {
     var input;
     switch (equationMerge[1]) {
         case "ᴧ":
-            module = place(new AND(110, 10, 2));
+            module = place(new AND(120, 15, 2));//J.E. Startwerte angepasst, damit sie 15ner Raster entsprechen (vorher 110, 10), gleiches in HTML
             break;
         case "↑":
-            module = place(new NAND(110, 10, 2));
+            module = place(new NAND(120, 15, 2));
             break;
         case "ᴠ":
-            module = place(new OR(110, 10, 2));
+            module = place(new OR(120, 15, 2));
             break;
         case "↓":
-            module = place(new NOR(110, 10, 2));
+            module = place(new NOR(120, 15, 2));
             break;            
         case "¬":
-            module = place(new NOT(110, 10, 2));
+            module = place(new NOT(120, 15, 2));
             break;
         case "⊕":
-            module = place(new XOR(110, 10, 2));
+            module = place(new XOR(120, 15, 2));
         break; 
         case "⊙":
-            module = place(new XNOR(110, 10, 2));
+            module = place(new XNOR(120, 15, 2));
         break;        
     }
 
@@ -597,7 +607,7 @@ function buildEquation(variables, equation, inputList, buffer) {
         else {
             input = outputList[equationMerge[0]];
         }
-        connect(input, new CONNECTION(0, 0, 0, 0), module, 0);
+        connect(input, new CONNECTION([0,0,0,0], [0,0,0,0]), module, 0);
         input.checkActivated();
 
         if (equationMerge.length > 2) {
@@ -607,7 +617,7 @@ function buildEquation(variables, equation, inputList, buffer) {
             else {
                 input = outputList[equationMerge[2]];
             }
-            connect(input, new CONNECTION(0, 0, 0, 0), module, 1);
+            connect(input, new CONNECTION([0,0,0,0], [0,0,0,0]), module, 1);
             input.checkActivated();
         }
     }
@@ -626,7 +636,7 @@ function buildEquation(variables, equation, inputList, buffer) {
  */
 function place(element) {
     while (isTouching(element)) {
-        element.dMove(0, 20);
+        element.dMove(0, 15);//J.E.
     }
     return element;
 }
@@ -664,28 +674,21 @@ function isTouching(element) {
     return false;
 }
 
-/** J.E.
- * debugging function, temporarily
- */
-function debug() {
-/*    var moduleList = new ModuleManager().getModuleList();
-    for(var i = 0; i < moduleList.length; i++) {
-        moduleList[i].group.select("rect").attr("fill", "transparent");
-    }
-    for(var j = 0; j < selectionList.length; j++) {
-        selectionList[j].group.select("rect").attr("fill", colorSelected);
-    }*/
-}
-
-/** K.F.
+/** K.F./J.E.
  * lets the given module and its connections follow the movement of the mouse
  * @param {Array} modules selection of modules to be moved
+ * @param {boolean} dragMode chooses drag or latch mode
  */
-function dragMove(modules) {
-    var dx = d3.event.dx;
-    var dy = d3.event.dy;
+function dragMove(modules, dragMode) {
     for(var h = 0; h < modules.length; h++) {
-        module = modules[h];
+        var module = modules[h];
+        if(dragMode) {
+            var dx = d3.event.dx;
+            var dy = d3.event.dy;
+        } else {
+            var dx = nextGridPoint(module.x) - module.x;
+            var dy = nextGridPoint(module.y) - module.y;
+        }
         module.dMove(dx, dy);
         if (module.output.length > 0) {
             for (var i = 0; i < module.output.length; i++) {
@@ -696,6 +699,9 @@ function dragMove(modules) {
             for (var i = 0; i < module.input.length; i++) {
                 for (var j = 0; j < module.input[i].length; j++) {
                     module.input[i][j].dMoveEnd(dx, dy);
+                    for(var k = 0; k < module.input[i][j].branches.length; k++) {//J.E.
+                        module.input[i][j].branches[k].dMoveStart(dx, dy);
+                    }
                 }
             }
         }
@@ -713,10 +719,19 @@ function dragConnection(connection) {
 }
 
 /** J.E.
+ * calculates nearest grid point of current coordinate
+ * @param {number} coordinate the coordinate to be used
+ */
+ function nextGridPoint(coordinate) {
+    var res = Math.round(coordinate/15)*15;
+    return res;
+}
+
+/** J.E.
  * deletion of all modules inside an array
  * @param {Array} modules the connection to be moved
  */
- function deleteSelection(modules) {
+function deleteSelection(modules) {
     for(var i = 0; i < modules.length; i++) {
         modules[i].delete();
     }
@@ -1270,12 +1285,12 @@ class Module {
      */
     constructor(x, y) {
         this.classname = this.constructor.name;    
-        this.x = x;
-        this.y = y;
+        this.x = nextGridPoint(x);
+        this.y = nextGridPoint(y);
         this.id = modulID;
         modulID++;
-        this.width = 20;
-        this.height = 20;
+        this.width = 30;
+        this.height = 30;
         this.maxInputCount = 2;
         this.maxOutputCount = 1;
         this.outputOffset = [];
@@ -1293,14 +1308,18 @@ class Module {
         new ModuleManager().addModule(this);
     }
 
-    /** W.A.
-    * Calculates position of input-circles + adding to inputOffset
+    /** W.A./J.E.
+    * Calculates position of input-circles + adding to inputOffset, Combining positions to array
     */
     calcInputOffset() {
-        var distCircles = this.height / (this.maxInputCount + 1);   // Distance of circles to each other based on module height
-
-        for (var i = 0; i < this.maxInputCount; i++) {
-            this.inputOffset[i] = [0, distCircles * (i + 1)];        // Combining positions to array
+        var oddNumbered = Boolean(this.maxInputCount%2);
+        var middlePosition = this.maxInputCount/2;
+        var j = 0;
+        for(var i = 0; i <= this.maxInputCount; i++) {
+            if(oddNumbered || i != middlePosition) {
+                this.inputOffset[j] = [0, 15 * (i + 1)];  
+                j++;
+            }
         }
     }
 
@@ -1310,7 +1329,7 @@ class Module {
     */
     calcOutputOffset(negation) {
         if (negation) {
-            this.outputOffset = [this.width + 5, this.height / 2];
+            this.outputOffset = [this.width, this.height / 2];//Hier +5
         }
 
         else {
@@ -1358,10 +1377,10 @@ class Module {
             this.group.select("rect").attr("stroke", colorActive);
 
             this.group.append("circle")
-                .attr("cx", this.width + 5)
+                .attr("cx", this.width)//Hier + 5
                 .attr("cy", this.height / 2)
                 .attr("r", 5)
-                .attr("fill", "transparent")
+                .attr("fill", "white")//Hier transparent
                 .attr("stroke", colorStandard);
         }
 
@@ -1378,7 +1397,9 @@ class Module {
                 .on("mouseout", function () { d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", "transparent") })
                 .call(d3.drag()
                     .on("start", function () {
-                        var connection = new CONNECTION(thisElement.getX() + thisElement.outputOffset[0], thisElement.getY() + thisElement.outputOffset[1], thisElement.getX() + thisElement.outputOffset[0], thisElement.getY() + thisElement.outputOffset[1])
+                        var startX = thisElement.getX() + thisElement.outputOffset[0];
+                        var startY = thisElement.getY() + thisElement.outputOffset[1];
+                        var connection = new CONNECTION([startX, startX, startX, startX], [startY, startY, startY, startY]);
                         connection.setInput(thisElement);
                         if (thisElement.value) {
                             thisElement.output.push(connection.setValue(true));
@@ -1394,6 +1415,7 @@ class Module {
                         }
                         else {
                             thisElement.output[thisElement.output.length - 1].output.checkActivated();
+                            thisElement.output[thisElement.output.length - 1].latch(); //J.E. latches Connection Points to nearest grid Points after beeing dragged
                         }
                     })
                 );
@@ -1415,11 +1437,14 @@ class Module {
         this.group.selectAll(".input")
             .data(inputIndexList)
             .on("mouseover", function (d) { new EventManager().setEventElement(thisElement, d); d3.select(this).attr("fill", colorActive).attr("stroke", colorActive) })
-            .on("mouseout", function (d) { new EventManager().setEventElement(null, d); d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", "transparent") });//input[0]
+            .on("mouseout", function (d) { new EventManager().setEventElement(null, d); d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", "transparent") })//input[0]
 
         this.group.attr('transform', 'translate(' + this.x + ',' + this.y + ')');
         this.group.on("contextmenu", function () { d3.event.preventDefault(); menuLogic(thisElement) });
-        this.group.call(d3.drag().on('drag', function () { dragMove(getSelection(thisElement)) }));
+        this.group.call(d3.drag()
+            .on('drag', function () { dragMove(getSelection(thisElement), true) })
+            .on("end", function () { dragMove(getSelection(thisElement), false) }));
+
         if (activatable) 
         {
             this.group.on("click", function () 
@@ -1463,9 +1488,9 @@ class Module {
      * @param {number} dy shift in y direction
      */
     dMove(dx, dy) {
-        this.group.attr('transform', 'translate(' + (this.x + dx) + ',' + (this.y + dy) + ')');
         this.x += dx;
         this.y += dy;
+        this.group.attr('transform', 'translate(' + nextGridPoint(this.x) + ',' + nextGridPoint(this.y) + ')');
     }
 
     /** K.F.
@@ -1562,8 +1587,8 @@ class Module {
         for (var i = 0; i < thisElement.input.length && i < newModule.maxInputCount; i++) {
             for (var j = 0; j < thisElement.input[i].length; j++) {
                 var oldConnection = thisElement.input[i][j];
-                var newConnection = new CONNECTION(oldConnection.input.getX() + oldConnection.input.getOutputOffset()[0], oldConnection.input.getY() + oldConnection.input.getOutputOffset()[1], thisElement.getX() + thisElement.getInputOffset(i)[0], thisElement.getY() + thisElement.getInputOffset(i)[1]);
-                newConnection.setInput(oldConnection.input)
+                var newConnection = new CONNECTION([oldConnection.input.getX() + oldConnection.input.getOutputOffset()[0], oldConnection.input.getX() + oldConnection.input.getOutputOffset()[0], thisElement.getX() + thisElement.getInputOffset(i)[0] ,thisElement.getX() + thisElement.getInputOffset(i)[0]], [oldConnection.input.getY() + oldConnection.input.getOutputOffset()[1], oldConnection.input.getY() + oldConnection.input.getOutputOffset()[1], thisElement.getY() + thisElement.getInputOffset(i)[1], thisElement.getY() + thisElement.getInputOffset(i)[1]]);
+                newConnection.setInput(oldConnection.input);
                 var value = false;
                 if (oldConnection.value) {
                     value = true;
@@ -1574,7 +1599,7 @@ class Module {
         //outputs:
         for (var i = 0; i < thisElement.output.length && i < newModule.maxOutputCount; i++) {
             var oldConnection = thisElement.output[i];
-            var newConnection = new CONNECTION(newModule.x + newModule.getOutputOffset()[0], newModule.y + newModule.getOutputOffset()[1], oldConnection.output.getX() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[0], oldConnection.output.getY() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[1]);
+            var newConnection = new CONNECTION([newModule.x + newModule.getOutputOffset()[0], newModule.x + newModule.getOutputOffset()[0], oldConnection.output.getX() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[0], oldConnection.output.getX() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[0]], [newModule.y + newModule.getOutputOffset()[1], newModule.y + newModule.getOutputOffset()[1], oldConnection.output.getY() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[1], oldConnection.output.getY() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[1]]);
             connect(newModule, newConnection, oldConnection.output, oldConnection.outputInputIndex, 0);
         }
         newModule.checkActivated();
@@ -1599,7 +1624,7 @@ class Module {
         this.output.push(element);
     }
 
-        /** J.E.
+    /** J.E.
      * enables renaming of an OUTPUT or INPUT
      * @param {string} classname name of the modul's subclass
      * @param {number} x x position of module
@@ -1638,7 +1663,7 @@ class AND extends Module {
         this.maxInputCount = inputCount;                    
         this.maxOutputCount = 1;
         this.width = 30;
-        this.height = 50;
+        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
 
         this.calcOutputOffset(false);                       
         this.calcInputOffset();                             
@@ -1687,7 +1712,7 @@ class NAND extends Module {
         this.maxInputCount = inputCount;                    
         this.maxOutputCount = 1;
         this.width = 30;
-        this.height = 50;
+        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
 
         this.calcOutputOffset(true);                        
         this.calcInputOffset();                             
@@ -1735,7 +1760,7 @@ class OR extends Module {
         this.maxInputCount = inputCount;                    
         this.maxOutputCount = 1;
         this.width = 30;
-        this.height = 50;
+        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
 
         this.calcOutputOffset(false);                       
         this.calcInputOffset();                             
@@ -1778,7 +1803,7 @@ class NOR extends Module {
         this.maxInputCount = inputCount;                    
         this.maxOutputCount = 1;
         this.width = 30;
-        this.height = 50;
+        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
 
         this.calcOutputOffset(true);                        
         this.calcInputOffset();                             
@@ -1807,7 +1832,7 @@ class NOR extends Module {
 /** J.E.
  * implements a Module as an XOR module
  */
- class XOR extends Module {
+class XOR extends Module {
     /**
      * sets all variables for an XOR module 
      * @param {number} x the x position in which the module is to be set
@@ -1826,7 +1851,7 @@ class NOR extends Module {
         this.maxInputCount = inputCount;                    
         this.maxOutputCount = 1;
         this.width = 30;
-        this.height = 50;
+        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
 
         this.calcOutputOffset(false);                        
         this.calcInputOffset();                             
@@ -1838,10 +1863,14 @@ class NOR extends Module {
         var activate = false;
 
         for (var i = 0; i < this.input.length; i++) {
+            var oneConnectionActive = false;
             for (var j = 0; j < this.input[i].length; j++) {
                 if (this.input[i][j].value) {
-                    activate = !activate;
+                    oneConnectionActive = true;
                 }
+            }
+            if(oneConnectionActive) {
+                activate = !activate;
             }
         }
         this.activateInactivate(activate);                   
@@ -1870,7 +1899,7 @@ class NOR extends Module {
         this.maxInputCount = inputCount;                    
         this.maxOutputCount = 1;
         this.width = 30;
-        this.height = 50;
+        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
 
         this.calcOutputOffset(true);                        
         this.calcInputOffset();                             
@@ -1882,10 +1911,14 @@ class NOR extends Module {
         var activate = true;
 
         for (var i = 0; i < this.input.length; i++) {
+            var oneConnectionActive = false;
             for (var j = 0; j < this.input[i].length; j++) {
                 if (this.input[i][j].value) {
-                    activate = !activate;
+                    oneConnectionActive = true;
                 }
+            }
+            if(oneConnectionActive) {
+                activate = !activate;
             }
         }
         this.activateInactivate(activate);                    
@@ -1906,8 +1939,8 @@ class NOT extends Module {
 
         this.maxInputCount = 1;
         this.maxOutputCount = 1;
-        this.width = 20;
-        this.height = 20;
+        this.width = 30;
+        this.height = 30;
 
         this.calcOutputOffset(true);                        
         this.calcInputOffset();                             
@@ -1949,8 +1982,8 @@ class OUTPUT extends Module {
         this.maxInputCount = 1;
         this.maxOutputCount = 0;
         this.input.push(new Array);
-        this.width = ((name.length * 8) + 25);
-        this.height = 20;
+        this.width = ((name.length * 8) + 15);
+        this.height =  15 * (inputCount + (inputCount+1)%2 + 1);
 
         this.calcInputOffset();                             
         this.build(name, false);
@@ -2000,8 +2033,8 @@ class INPUT extends Module {
         this.maxInputCount = 0;
         this.maxOutputCount = 1;
 
-        this.width = ((name.length * 8) + 15);
-        this.height = 20;
+        this.width = (Math.round(((name.length * 8) + 15)/15)*15);
+        this.height = 30;
 
         this.calcOutputOffset(false);                       
         this.build(name, false, true);
@@ -2027,40 +2060,68 @@ class INPUT extends Module {
     }
 }
 
-/** K.F.
+/** K.F./J.E.
  * acts as a connection element between modules
  */
 class CONNECTION {
     /**
      * creates a connection based on the given parameters
-     * @param {number} startX the x position in which the connection is to be start
-     * @param {number} startY the y position in which the connection is to be start
-     * @param {number} endX the x position in which the connection is to be end
-     * @param {number} endY the y position in which the connection is to be end
+     * @param {Array} gridPointsX the x coordinates of the points that define the Connection
+     * @param {Array} gridPointsY the y coordinates of the points that define the Connection
      */
-    constructor(startX, startY, endX, endY) {
+    constructor(gridPointsX, gridPointsY) {
         var thisElement = this;
+        var branchStartX;
+        var branchStartY;
+        var connection;
 
         this.classname = this.constructor.name;
         this.outputInputIndex;
+        this.parent = null;
         this.input = null;
         this.output = null;
         this.inputID = null;
         this.outputID = null;
-        this.startX = startX;
-        this.startY = startY;
-        this.endX = endX;
-        this.endY = endY;
-        this.curve = 40;
+        this.branches = [];
+        this.gridPointsX = gridPointsX;
+        this.gridPointsY = gridPointsY;
         this.path = d3.select("svg").append("path")
-            .attr("d", "M" + startX + " " + startY + " C" + (startX + this.curve) + " " + startY + ", " + (endX - this.curve) + " " + endY + ", " + endX + " " + endY + " ")
+            .attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1])//J.E. in allen Funktionen angepasst, die Linie über svg path zeichnen, Anpassen, damit Linie statt Kurve gezeichnet wird
             .attr("stroke", colorStandard)
-            .attr("fill", "transparent")
-            .attr("stroke-width", "1px")
-            .on("mouseover", function () { if (thisElement.output != null) { d3.select(this).attr("stroke-width", "3px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorConnectionPoints) } } })
-            .on("mouseout", function () { d3.select(this).attr("stroke-width", "1px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorStandard) } })
+            .attr("fill", "none")
+            .attr("stroke-width", "2px")
+            .on("mousedown", function () {
+                branchStartX = nextGridPoint(d3.mouse(this)[0]);//J.E.
+                branchStartY = nextGridPoint(d3.mouse(this)[1]);
+            })
+            .on("mouseover", function () { if (thisElement.output != null) { d3.select(this).attr("stroke-width", "4px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorConnectionPoints) } } })
+            .on("mouseout", function () { d3.select(this).attr("stroke-width", "2px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorStandard) } })
             .on("contextmenu", function () { d3.event.preventDefault(); thisElement.delete(true) })
-            .on("click", function () { if (globalDeleteActive) { thisElement.delete(true) } });
+            .on("click", function () { if (globalDeleteActive) { thisElement.delete(true) } })
+            .call(d3.drag()//J.E.
+                .on("start", function () {
+                    connection = new CONNECTION([branchStartX, branchStartX, branchStartX, branchStartX], [branchStartY, branchStartY, branchStartY, branchStartY])
+                    connection.setInput(thisElement.input);
+                    connection.parent = thisElement;
+                    if (thisElement.input.value) {
+                        thisElement.input.output.push(connection.setValue(true));
+                    }
+                    else {
+                        thisElement.input.output.push(connection.setValue(false));
+                    }
+                })
+                .on('drag', function () { dragConnection(thisElement.input.output[thisElement.input.output.length - 1]); })
+                .on("end", function () {
+                    if (!connect(null, thisElement.input.output[thisElement.input.output.length - 1], new EventManager().getLastEventElement(), new EventManager().getElementInputIndex())) {
+                        thisElement.input.output.pop().delete();
+                    }
+                    else {
+                        connection.output.checkActivated();
+                        thisElement.addBranch(connection);
+                        connection.latch();
+                    }
+                })
+            );
         this.path.moveToBack();
         new ConnectionManager().addConnection(this);
     }
@@ -2071,9 +2132,10 @@ class CONNECTION {
      * @param {number} y target y coordinate
      */
     moveEnd(x, y) {
-        this.endX = x;
-        this.endY = y;
-        this.path.attr("d", "M" + this.startX + " " + this.startY + " C" + (this.startX + this.curve) + " " + this.startY + ", " + (this.endX - this.curve) + " " + this.endY + ", " + this.endX + " " + this.endY + " ");
+        this.gridPointsX[this.gridPointsX.length - 1] = x;
+        this.gridPointsY[this.gridPointsY.length - 1] = y;
+        this.gridPointsY[2] = y;
+        this.path.attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1]);
         this.path.moveToBack();
     }
 
@@ -2083,9 +2145,9 @@ class CONNECTION {
      * @param {number} y target y coordinate
      */
     moveStart(x, y) {
-        this.startX = x;
-        this.startY = y;
-        this.path.attr("d", "M" + this.startX + " " + this.startY + " C" + (this.startX + this.curve) + " " + this.startY + ", " + (this.endX - this.curve) + " " + this.endY + ", " + this.endX + " " + this.endY + " ");
+        this.gridPointsX = [x, x + 15, x + 15, 0];
+        this.gridPointsY = [y, y, 0, 0];
+        this.path.attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1]);
         this.path.moveToBack();
     }
 
@@ -2095,9 +2157,14 @@ class CONNECTION {
      * @param {number} dy shift in y direction
      */
     dMoveEnd(dx, dy) {
-        this.endX += dx;
-        this.endY += dy;
-        this.path.attr("d", "M" + this.startX + " " + this.startY + " C" + (this.startX + this.curve) + " " + this.startY + ", " + (this.endX - this.curve) + " " + this.endY + ", " + this.endX + " " + this.endY + " ");
+        this.gridPointsX[this.gridPointsX.length - 1] += dx;
+        this.gridPointsY[this.gridPointsY.length - 1] += dy;
+        this.gridPointsY[2] = this.gridPointsY[this.gridPointsY.length - 1];
+        if(this.parent == null && nextGridPoint(this.gridPointsY[0]) == nextGridPoint(this.gridPointsY[this.gridPointsY.length - 1])) {
+            this.gridPointsX[1] = this.gridPointsX[0] + 15;
+            this.gridPointsX[2] = this.gridPointsX[0] + 15;
+        }
+        this.path.attr("d", "M" + nextGridPoint(this.gridPointsX[0]) + " " + nextGridPoint(this.gridPointsY[0]) + " L" + nextGridPoint(this.gridPointsX[1]) + " " + nextGridPoint(this.gridPointsY[1]) + " L" + nextGridPoint(this.gridPointsX[2]) + " " + nextGridPoint(this.gridPointsY[2]) + " L" + nextGridPoint(this.gridPointsX[this.gridPointsX.length - 1]) + " " + nextGridPoint(this.gridPointsY[this.gridPointsY.length - 1]));
         this.path.moveToBack();
     }
 
@@ -2107,15 +2174,53 @@ class CONNECTION {
      * @param {number} dy shift in y direction
      */
     dMoveStart(dx, dy) {
-        this.startX += dx;
-        this.startY += dy;
-        this.path.attr("d", "M" + this.startX + " " + this.startY + " C" + (this.startX + this.curve) + " " + this.startY + ", " + (this.endX - this.curve) + " " + this.endY + ", " + this.endX + " " + this.endY + " ");
+        var startPoint = this.input.x + this.input.getOutputOffset()[0] + 15;
+        if(this.parent == null) {
+            this.gridPointsX[0] += dx;
+            this.gridPointsY[0] += dy;
+            if(nextGridPoint(this.gridPointsY[0]) == nextGridPoint(this.gridPointsY[this.gridPointsY.length - 1]) || this.gridPointsX[1] <= startPoint) {
+                this.gridPointsX[1] = startPoint;
+            }
+        } else {
+            if(this.gridPointsX[0] <= startPoint) {
+                this.gridPointsX[0] = startPoint;
+                this.gridPointsX[1] = this.gridPointsX[0];
+            }
+            if(this.gridPointsX[0] < nextGridPoint(this.parent.gridPointsX[1]) && nextGridPoint(this.gridPointsY[0]) != nextGridPoint(this.parent.gridPointsY[0])) {
+                this.gridPointsY[0] = nextGridPoint(this.parent.gridPointsY[0]);
+            } else if(this.gridPointsX[0] > nextGridPoint(this.parent.gridPointsX[2]) && nextGridPoint(this.gridPointsY[0]) != nextGridPoint(this.parent.gridPointsY[2])) {
+                this.gridPointsY[0] = nextGridPoint(this.parent.gridPointsY[2]);
+            } else if(this.gridPointsX[0] == nextGridPoint(this.parent.gridPointsX[2])) {
+                var upperEnd = nextGridPoint(Math.min(this.parent.gridPointsY[1], this.parent.gridPointsY[2]));
+                var lowerEnd = nextGridPoint(Math.max(this.parent.gridPointsY[1], this.parent.gridPointsY[2]));  
+                if(this.gridPointsY[2] < upperEnd) {
+                    this.gridPointsY[0] = upperEnd;
+                } else if(this.gridPointsY[2] > lowerEnd) {
+                    this.gridPointsY[0] = lowerEnd;
+                }
+            }
+        }
+        this.gridPointsX[2] = this.gridPointsX[1];
+        this.gridPointsY[1] = this.gridPointsY[0];
+        this.path.attr("d", "M" + nextGridPoint(this.gridPointsX[0]) + " " + nextGridPoint(this.gridPointsY[0]) + " L" + nextGridPoint(this.gridPointsX[1]) + " " + nextGridPoint(this.gridPointsY[1]) + " L" + nextGridPoint(this.gridPointsX[2]) + " " + nextGridPoint(this.gridPointsY[2]) + " L" + nextGridPoint(this.gridPointsX[this.gridPointsX.length - 1]) + " " + nextGridPoint(this.gridPointsY[this.gridPointsY.length - 1]));
+        this.path.moveToBack();
+    }
+
+    /** J.E.
+     * connection points latch onto grid point after beeing dragged
+     */
+    latch() { 
+        for(var i = 0; i < this.gridPointsX.length; i++) {
+            this.gridPointsX[i] = nextGridPoint(this.gridPointsX[i]);
+            this.gridPointsY[i] = nextGridPoint(this.gridPointsY[i]);
+        }
+        this.path.attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1]);
         this.path.moveToBack();
     }
 
     /**
      * deletes this connection
-     * @param {boolean} [setValue] indicates weather the value should first set to false 
+     * @param {boolean} [setValue] indicates wether the value should first set to false 
      */
     delete(resetValue) {
         if (this.output != null) {
@@ -2152,6 +2257,12 @@ class CONNECTION {
         this.input = null;
         this.output = null;
         this.path.remove();
+        if(this.parent != null) {
+            this.parent.branches.splice(0, 1, this);
+        }
+        for(var i = 0; i < this.branches.length; i++) {
+            this.branches[i].delete(true);
+        }
         new ConnectionManager().removeConnection(this);
     }
 
@@ -2197,42 +2308,15 @@ class CONNECTION {
     setOutputInputIndex(index) {
         this.outputInputIndex = index;
     }
-}
 
-/** J.E.
- * implements a Module as an JUNCTION module
- */
- class JUNCTION extends Module {
-    /**
-     * sets all variables for an JUNCTION module 
-     * @param {number} x the x position in which the module is to be set
-     * @param {number} y the y position in which the module is to be set
+    /** J.E.
+     * adds branch to old connection
+     * @param {CONNECTION} newConnection the new connection to be defined as branch of old connection
      */
-    constructor(x, y) {
-        super(x, y);
-
-        this.maxInputCount = 1;
-        this.maxOutputCount = 1;
-        this.width = 10;
-        this.height = 0;
-
-        this.calcOutputOffset(false);                        
-        this.calcInputOffset();                             
-        this.build("", false);
-        this.addsInputToArray();                            
-    }
-
-    checkActivated() {
-        var activate = false;
-        for (var i = 0; i < this.input.length; i++) {
-            for (var j = 0; j < this.input[i].length; j++) {
-                if (this.input[i][j].value) {
-                    activate = true;
-                }
-            }
-        }
-        this.activateInactivate(activate);                  
+    addBranch(newConnection) {
+        this.branches.push(newConnection);
     }
 }
 
 //#endregion
+//    .attr('d', d3.line()([[100, 60], [40, 90], [200, 80], [300, 150]]))

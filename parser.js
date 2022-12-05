@@ -126,54 +126,11 @@ function checkResultName(vars,resultName, storage){ //Überprüfung der Eingabe 
 
 function changeOperator(input){ //Ersetzt die möglichen Eingaben für die Logikbausteine mit einheitlichen Operatoren
 	var res = input;
+	search = ["~", "!", "*", "&", "+", "|", "\\", "-", " XAND ", " Xand ", " xand ", " XNOR ", " Xnor ", " xnor ", " NAND ", " Nand ", " nand ", " AND ", " And ", " and ", " NOR ", " Nor ", " nor ", " XOR ", " Xor ", " xor ", " OR ", " Or ", " or ", " NOT ", " Not ", " not "]
+	replace = ["¬", "¬", "ᴧ", "ᴧ", "ᴠ", "↑", "↓", "↓", " ⊙ ", " ⊙ ", " ⊙ ", " ⊙ ", " ⊙ ", " ⊙ ", " ↑ ", " ↑ ", " ↑ ", " ᴧ ", " ᴧ ", " ᴧ ", " ↓ ", " ↓ ", " ↓ ", " ⊕ ", " ⊕ ", " ⊕ ", " ᴠ ", " ᴠ ", " ᴠ ", " ¬ ", " ¬ ", " ¬ "]
 
-	res = res.replace("~", "¬");
-	res = res.replace("!", "¬");
-	res = res.replace("*", "ᴧ");
-	res = res.replace("&", "ᴧ");
-	res = res.replace("+", "ᴠ");
-	res = res.replace("|", "↑");
-	res = res.replace("\\", "↓");	
-	res = res.replace("-", "↓");
-
-	if(res.includes(" XAND ") || res.includes(" Xand ") || res.includes(" xand ")){
-		res = res.replace("XAND", "⊙");
-		res = res.replace("Xand", "⊙");
-		res = res.replace("xand", "⊙");
-	}if(res.includes(" XNOR ") || res.includes(" Xnor ") || res.includes(" xnor ")){
-		res = res.replace("XNOR", "⊙");
-		res = res.replace("Xnor", "⊙");
-		res = res.replace("xnor", "⊙");
-	}
-	if(res.includes(" NAND ") || res.includes(" Nand ") || res.includes(" nand ")){
-		res = res.replace("NAND", "↑");
-		res = res.replace("Nand", "↑");
-		res = res.replace("nand", "↑");
-	}
-	if(res.includes(" AND ") || res.includes(" And ") || res.includes(" and ")){
-		res = res.replace("AND", "ᴧ");
-		res = res.replace("And", "ᴧ");
-		res = res.replace("and", "ᴧ");
-	}
-	if(res.includes(" NOR ") || res.includes(" Nor ") || res.includes(" nor ")){
-		res = res.replace("NOR", "↓");
-		res = res.replace("Nor", "↓");
-		res = res.replace("nor", "↓");
-	}
-	if(res.includes(" XOR ") || res.includes(" Xor ") || res.includes(" xor ")) {
-		res = res.replace("xor", "⊕");
-		res = res.replace("Xor", "⊕");
-		res = res.replace("XOR", "⊕");
-		}
-	if(res.includes(" OR ") || res.includes(" Or ") || res.includes(" or ")){
-		res = res.replace("OR", "ᴠ");
-		res = res.replace("Or", "ᴠ");
-		res = res.replace("or", "ᴠ");
-	}
-	if(res.includes(" NOT ")|| res.includes(" Not ")|| res.includes(" not ")|| res.slice(0,4)=="NOT "|| res.slice(0,4)=="Not "|| res.slice(0,4)=="not "){
-		res = res.replace("NOT", "¬");
-		res = res.replace("Not", "¬");
-		res = res.replace("not", "¬");
+	for(let i = 0; i < search.length;i++) {
+		res = res.replace(search[i], replace[i]);//" " + search[i] + " ", " " + replace[i] + " "
 	}
 	
 	return res;
