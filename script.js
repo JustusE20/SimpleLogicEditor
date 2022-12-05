@@ -1,6 +1,6 @@
 /* v1.0.5 by Konstantin Fuchs
 *  v2.0.6 by Wiebke Albers
-*  v3.0.3 by Justus Epperlein
+*  v3.0.4 by Justus Epperlein
 */
 
 var globalDeleteActive = false;
@@ -92,7 +92,7 @@ window.onclick = function(event) {
  * Shows developer information
  */
 function about(){
-    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.2 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
+    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.4 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
 }
 
 /** K.F./W.A.
