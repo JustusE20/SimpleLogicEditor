@@ -1,6 +1,6 @@
 /* v1.0.5 by Konstantin Fuchs
 *  v2.0.6 by Wiebke Albers
-*  v3.0.4 by Justus Epperlein
+*  v3.0.5 by Justus Epperlein
 */
 
 var globalDeleteActive = false;
@@ -18,6 +18,7 @@ var widthNavBar = document.getElementById("navigationBar").clientHeight;
 var width = 100;
 var height = 90;
 var select = document.getElementById("select"); //J.E.
+const gridSize = 15;
 
 
 //#region prototype additional functions
@@ -92,7 +93,7 @@ window.onclick = function(event) {
  * Shows developer information
  */
 function about(){
-    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.4 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
+    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.5 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
 }
 
 /** K.F./W.A.
@@ -271,14 +272,17 @@ var selectionArea = {
             }
         }
     },
+    setSelection: function(x1, y1, x2, y2) { //Sets all coordinates of selection area
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+    },
 };
 onmousedown = function(e) {
     if(e.clientY > (widthNavBar + 10) && !e.target.matches('.dropdown-content a')  && !e.target.matches('.d3-context-menu ul li') && e.button === 0) {
         select.hidden = 0;
-        selectionArea.x1 = e.clientX - 10;
-        selectionArea.y1 = e.clientY - 65;
-        selectionArea.x2 = e.clientX - 10;
-        selectionArea.y2 = e.clientY - 65;
+        selectionArea.setSelection(e.clientX - 10, e.clientY - 65, e.clientX - 10, e.clientY - 65);
         selectionArea.drawSelection();
     }
 };
@@ -295,10 +299,7 @@ onmousemove = function(e) {
 };
 onmouseup = function(e) {
     select.hidden = 1;
-    selectionArea.x1 = 0;
-    selectionArea.y1 = 0;
-    selectionArea.x2 = 0;
-    selectionArea.y2 = 0;
+    selectionArea.setSelection(0, 0, 0, 0);
 };
 
 /** J.E.
@@ -577,7 +578,7 @@ function buildEquation(variables, equation, inputList, buffer) {
     var input;
     switch (equationMerge[1]) {
         case "ᴧ":
-            module = place(new AND(120, 15, 2));//J.E. Startwerte angepasst, damit sie 15ner Raster entsprechen (vorher 110, 10), gleiches in HTML
+            module = place(new AND(120, 15, 2));
             break;
         case "↑":
             module = place(new NAND(120, 15, 2));
@@ -636,7 +637,7 @@ function buildEquation(variables, equation, inputList, buffer) {
  */
 function place(element) {
     while (isTouching(element)) {
-        element.dMove(0, 15);//J.E.
+        element.dMove(0, gridSize);
     }
     return element;
 }
@@ -723,7 +724,7 @@ function dragConnection(connection) {
  * @param {number} coordinate the coordinate to be used
  */
  function nextGridPoint(coordinate) {
-    var res = Math.round(coordinate/15)*15;
+    var res = Math.round(coordinate/gridSize)*gridSize;
     return res;
 }
 
@@ -1317,7 +1318,7 @@ class Module {
         var j = 0;
         for(var i = 0; i <= this.maxInputCount; i++) {
             if(oddNumbered || i != middlePosition) {
-                this.inputOffset[j] = [0, 15 * (i + 1)];  
+                this.inputOffset[j] = [0, gridSize * (i + 1)];  
                 j++;
             }
         }
@@ -1329,7 +1330,7 @@ class Module {
     */
     calcOutputOffset(negation) {
         if (negation) {
-            this.outputOffset = [this.width, this.height / 2];//Hier +5
+            this.outputOffset = [this.width, this.height / 2];//for old inverse output offset this.height / 2 + 5
         }
 
         else {
@@ -1377,10 +1378,10 @@ class Module {
             this.group.select("rect").attr("stroke", colorActive);
 
             this.group.append("circle")
-                .attr("cx", this.width)//Hier + 5
+                .attr("cx", this.width)//for old output negation + 5
                 .attr("cy", this.height / 2)
                 .attr("r", 5)
-                .attr("fill", "white")//Hier transparent
+                .attr("fill", "white")//for old negated output visualisation "transparent"
                 .attr("stroke", colorStandard);
         }
 
@@ -1415,7 +1416,7 @@ class Module {
                         }
                         else {
                             thisElement.output[thisElement.output.length - 1].output.checkActivated();
-                            thisElement.output[thisElement.output.length - 1].latch(); //J.E. latches Connection Points to nearest grid Points after beeing dragged
+                            thisElement.output[thisElement.output.length - 1].latch(); //J.E.
                         }
                     })
                 );
@@ -1641,12 +1642,12 @@ class Module {
     }
 }
 
-/** K.F./W.A.
- * implements a Module as an AND module
+/** J.E.
+ * implements logic gates
  */
-class AND extends Module {
+ class Logic extends Module {
     /**
-     * sets all variables for an AND module 
+     * sets all variables for a logic gate 
      * @param {number} x the x position in which the module is to be set
      * @param {number} y the y position in which the module is to be set
      * @param {number} inputCount the number of inputs is to be set
@@ -1659,14 +1660,28 @@ class AND extends Module {
         {
             inputCount = 2;
         }
-
-        this.maxInputCount = inputCount;                    
+        this.maxInputCount = inputCount;
         this.maxOutputCount = 1;
         this.width = 30;
-        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
+        this.height = gridSize * (inputCount + (inputCount+1)%2 + 1);
+        this.calcOutputOffset(false);
+        this.calcInputOffset();                            
+    }
+}
 
-        this.calcOutputOffset(false);                       
-        this.calcInputOffset();                             
+/** K.F./W.A.
+ * implements a Module as an AND module
+ */
+class AND extends Logic {
+    /**
+     * sets all variables for an AND module 
+     * @param {number} x the x position in which the module is to be set
+     * @param {number} y the y position in which the module is to be set
+     * @param {number} inputCount the number of inputs is to be set
+     */
+    constructor(x, y, inputCount)                             
+    {
+        super(x, y, inputCount);                            
         this.build("&", false);
         this.addsInputToArray();                                
     }
@@ -1692,7 +1707,7 @@ class AND extends Module {
 /** K.F./W.A.
  * implements a Module as an NAND module
  */
-class NAND extends Module {
+class NAND extends Logic {
     /**
      * sets all variables for an NAND module 
      * @param {number} x the x position in which the module is to be set
@@ -1702,20 +1717,7 @@ class NAND extends Module {
      */
     constructor(x, y, inputCount)                        
     {
-        super(x, y);
-
-        if (!inputCount)                                     
-        {
-            inputCount = 2;
-        }
-        
-        this.maxInputCount = inputCount;                    
-        this.maxOutputCount = 1;
-        this.width = 30;
-        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
-
-        this.calcOutputOffset(true);                        
-        this.calcInputOffset();                             
+        super(x, y, inputCount);                           
         this.build("&", true);
         this.addsInputToArray();                            
     }
@@ -1741,7 +1743,7 @@ class NAND extends Module {
 /** K.F./W.A.
  * implements a Module as an OR module
  */
-class OR extends Module {
+class OR extends Logic {
     /**
      * sets all variables for an OR module 
      * @param {number} x the x position in which the module is to be set
@@ -1750,20 +1752,7 @@ class OR extends Module {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y);
-
-        if (!inputCount)                                     
-        {
-            inputCount = 2;
-        }
-
-        this.maxInputCount = inputCount;                    
-        this.maxOutputCount = 1;
-        this.width = 30;
-        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
-
-        this.calcOutputOffset(false);                       
-        this.calcInputOffset();                             
+        super(x, y, inputCount);                           
         this.build("≥1", false);
         this.addsInputToArray();                            
     }
@@ -1784,7 +1773,7 @@ class OR extends Module {
 /** K.F./W.A.
  * implements a Module as an NOR module
  */
-class NOR extends Module {
+class NOR extends Logic {
     /**
      * sets all variables for an NOR module 
      * @param {number} x the x position in which the module is to be set
@@ -1793,20 +1782,7 @@ class NOR extends Module {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y);
-
-        if (!inputCount)                                     
-        {
-            inputCount = 2;
-        }
-
-        this.maxInputCount = inputCount;                    
-        this.maxOutputCount = 1;
-        this.width = 30;
-        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
-
-        this.calcOutputOffset(true);                        
-        this.calcInputOffset();                             
+        super(x, y, inputCount);                          
         this.build("≥1", true);
         this.addsInputToArray();                            
     }
@@ -1832,7 +1808,7 @@ class NOR extends Module {
 /** J.E.
  * implements a Module as an XOR module
  */
-class XOR extends Module {
+class XOR extends Logic {
     /**
      * sets all variables for an XOR module 
      * @param {number} x the x position in which the module is to be set
@@ -1841,20 +1817,7 @@ class XOR extends Module {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y);
-
-        if (!inputCount)                                     
-        {
-            inputCount = 2;
-        }
-
-        this.maxInputCount = inputCount;                    
-        this.maxOutputCount = 1;
-        this.width = 30;
-        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
-
-        this.calcOutputOffset(false);                        
-        this.calcInputOffset();                             
+        super(x, y, inputCount);                           
         this.build("=1", false);
         this.addsInputToArray();                            
     }
@@ -1880,7 +1843,7 @@ class XOR extends Module {
 /** J.E.
  * implements a Module as an XNOR module
  */
- class XNOR extends Module {
+ class XNOR extends Logic {
     /**
      * sets all variables for an XNOR module 
      * @param {number} x the x position in which the module is to be set
@@ -1889,20 +1852,7 @@ class XOR extends Module {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y);
-
-        if (!inputCount)                                     
-        {
-            inputCount = 2;
-        }
-
-        this.maxInputCount = inputCount;                    
-        this.maxOutputCount = 1;
-        this.width = 30;
-        this.height = 15 * (inputCount + (inputCount+1)%2 + 1);
-
-        this.calcOutputOffset(true);                        
-        this.calcInputOffset();                             
+        super(x, y, inputCount);                           
         this.build("=1", true);
         this.addsInputToArray();                            
     }
@@ -1983,7 +1933,7 @@ class OUTPUT extends Module {
         this.maxOutputCount = 0;
         this.input.push(new Array);
         this.width = ((name.length * 8) + 15);
-        this.height =  15 * (inputCount + (inputCount+1)%2 + 1);
+        this.height =  gridSize * (inputCount + (inputCount+1)%2 + 1);
 
         this.calcInputOffset();                             
         this.build(name, false);
@@ -2033,7 +1983,7 @@ class INPUT extends Module {
         this.maxInputCount = 0;
         this.maxOutputCount = 1;
 
-        this.width = (Math.round(((name.length * 8) + 15)/15)*15);
+        this.width = (Math.round(((name.length * 8) + 15)/gridSize)*gridSize);
         this.height = 30;
 
         this.calcOutputOffset(false);                       
@@ -2086,12 +2036,12 @@ class CONNECTION {
         this.gridPointsX = gridPointsX;
         this.gridPointsY = gridPointsY;
         this.path = d3.select("svg").append("path")
-            .attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1])//J.E. in allen Funktionen angepasst, die Linie über svg path zeichnen, Anpassen, damit Linie statt Kurve gezeichnet wird
+            .attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1])
             .attr("stroke", colorStandard)
             .attr("fill", "none")
             .attr("stroke-width", "2px")
             .on("mousedown", function () {
-                branchStartX = nextGridPoint(d3.mouse(this)[0]);//J.E.
+                branchStartX = nextGridPoint(d3.mouse(this)[0]);
                 branchStartY = nextGridPoint(d3.mouse(this)[1]);
             })
             .on("mouseover", function () { if (thisElement.output != null) { d3.select(this).attr("stroke-width", "4px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorConnectionPoints) } } })
@@ -2145,7 +2095,7 @@ class CONNECTION {
      * @param {number} y target y coordinate
      */
     moveStart(x, y) {
-        this.gridPointsX = [x, x + 15, x + 15, 0];
+        this.gridPointsX = [x, x + gridSize, x + gridSize, 0];
         this.gridPointsY = [y, y, 0, 0];
         this.path.attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1]);
         this.path.moveToBack();
@@ -2161,8 +2111,8 @@ class CONNECTION {
         this.gridPointsY[this.gridPointsY.length - 1] += dy;
         this.gridPointsY[2] = this.gridPointsY[this.gridPointsY.length - 1];
         if(this.parent == null && nextGridPoint(this.gridPointsY[0]) == nextGridPoint(this.gridPointsY[this.gridPointsY.length - 1])) {
-            this.gridPointsX[1] = this.gridPointsX[0] + 15;
-            this.gridPointsX[2] = this.gridPointsX[0] + 15;
+            this.gridPointsX[1] = this.gridPointsX[0] + gridSize;
+            this.gridPointsX[2] = this.gridPointsX[0] + gridSize;
         }
         this.path.attr("d", "M" + nextGridPoint(this.gridPointsX[0]) + " " + nextGridPoint(this.gridPointsY[0]) + " L" + nextGridPoint(this.gridPointsX[1]) + " " + nextGridPoint(this.gridPointsY[1]) + " L" + nextGridPoint(this.gridPointsX[2]) + " " + nextGridPoint(this.gridPointsY[2]) + " L" + nextGridPoint(this.gridPointsX[this.gridPointsX.length - 1]) + " " + nextGridPoint(this.gridPointsY[this.gridPointsY.length - 1]));
         this.path.moveToBack();
@@ -2174,7 +2124,7 @@ class CONNECTION {
      * @param {number} dy shift in y direction
      */
     dMoveStart(dx, dy) {
-        var startPoint = this.input.x + this.input.getOutputOffset()[0] + 15;
+        var startPoint = this.input.x + this.input.getOutputOffset()[0] + gridSize;
         if(this.parent == null) {
             this.gridPointsX[0] += dx;
             this.gridPointsY[0] += dy;
@@ -2319,4 +2269,3 @@ class CONNECTION {
 }
 
 //#endregion
-//    .attr('d', d3.line()([[100, 60], [40, 90], [200, 80], [300, 150]]))
