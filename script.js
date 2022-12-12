@@ -1,11 +1,11 @@
 /* v1.0.5 by Konstantin Fuchs
 *  v2.0.6 by Wiebke Albers
-*  v3.0.5 by Justus Epperlein
+*  v3.0.6 by Justus Epperlein
 */
 
 var globalDeleteActive = false;
-var colorActive = "orange";
-var colorStandard = "black";
+var colorActive = "rgb(90, 185, 90)";
+var colorStandard = "rgb(250, 90, 71)";
 var colorSelected = "lightgrey";
 var colorConnectionPoints = "#38393d";
 var viewZoom = 0;
@@ -17,7 +17,7 @@ var statusNavigationBar = true;
 var widthNavBar = document.getElementById("navigationBar").clientHeight;
 var width = 100;
 var height = 90;
-var select = document.getElementById("select"); //J.E.
+var select = document.getElementById("select");
 const gridSize = 15;
 
 
@@ -93,7 +93,7 @@ window.onclick = function(event) {
  * Shows developer information
  */
 function about(){
-    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.5 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
+    alert("v1.0.5 by Konstantin Fuchs \nv2.0.6 by Wiebke Albers \nv3.0.6 by Justus Epperlein \nUnder the supervision of Prof. Dr. Rüdiger Heintz");
 }
 
 /** K.F./W.A.
@@ -289,7 +289,7 @@ onmousedown = function(e) {
 onmousemove = function(e) {
     if(select.hidden == 0) {
         selectionArea.x2 = e.clientX - 10;
-        if(e.clientY > (widthNavBar + 15)) {
+        if(e.clientY > (widthNavBar + 10)) {
             selectionArea.y2 = e.clientY - 65;
         } else {
             selectionArea.y2 = widthNavBar - 50;
@@ -396,7 +396,7 @@ function serializeLogic()
                                                 'maxInputCount','maxOutputCount',
                                                 'outputOffset','inputOffset']));
     jsonConnections.push(JSON.stringify(listConnections,['classname','inputID','outputID',
-                                                        'gridPointsX','gridPointsY', 'curve']));
+                                                        'gridPointsX','gridPointsY', 'parent']));
     
     var textLogic = [listModules, listConnections, jsonModules, jsonConnections];
     return textLogic;
@@ -435,7 +435,11 @@ function deserializeLogic()
         listConnectionsOld.forEach(function(connection){
             listConnectedModules.push(connection.outputID);
             var inputIndex = listConnectedModules.filter(outID => outID == connection.outputID)
-            createConnection(connection,listModulesNew, inputIndex.length-1);
+            createConnection(connection, listModulesNew, inputIndex.length-1);
+        })
+        var listConnectionsNew = new ConnectionManager().getConnectionList();//J.E.
+        listConnectionsNew.forEach(function(connection){
+            connection.latch();
         })
     }
     else{
@@ -453,9 +457,29 @@ function createConnection(connection, listModulesNew, inputIndex)
 {
     var startObject = listModulesNew.find(obj => obj.id == connection.inputID);
     var endObject = listModulesNew.find(obj => obj.id == connection.outputID);
+    var newConnection = new CONNECTION(connection.gridPointsX, connection.gridPointsY);
+    if(connection.parent != null) { //J.E.
+        var listConnectionsNew = new ConnectionManager().getConnectionList();
+        for(var i = 0; i < listConnectionsNew.length; i++) {
+            var newParent = listConnectionsNew[i];
+            var oldParent = connection.parent;
+            var foundParent = true;
+            for(var j = 0; j < newParent.gridPointsX.length; j++) {
+                if(newParent.gridPointsX[j] != oldParent.gridPointsX[j] || newParent.gridPointsY[j] != oldParent.gridPointsY[j]) {
+                    foundParent = false;
+                    break;
+                }
+            }
+            if(foundParent) {
+                newParent.branches.push(newConnection);
+                newConnection.parent = newParent;
+                break;
+            }
+        }
+    }
    
     try{
-        connect(startObject, new CONNECTION([0,0,0,0], [0,0,0,0]), endObject, inputIndex);
+        connect(startObject, newConnection, endObject, inputIndex);
         startObject.checkActivated();
     }
     catch{
@@ -510,7 +534,7 @@ function draw(text) {draw
         if (lastElement != null) {
             var output = place(new OUTPUT(210, 30, parser.getResult()));
             buffer.push(output);
-            connect(lastElement, new CONNECTION([0,0,0,0], [0,0,0,0]), output, 0);
+            connect(lastElement, new CONNECTION([0, 0, 0, 0], [0, 0, 0, 0]), output, 0);
             lastElement.checkActivated();
         }
     }
@@ -608,7 +632,7 @@ function buildEquation(variables, equation, inputList, buffer) {
         else {
             input = outputList[equationMerge[0]];
         }
-        connect(input, new CONNECTION([0,0,0,0], [0,0,0,0]), module, 0);
+        connect(input, new CONNECTION([0, 0, 0, 0], [0, 0, 0, 0]), module, 0);
         input.checkActivated();
 
         if (equationMerge.length > 2) {
@@ -618,7 +642,7 @@ function buildEquation(variables, equation, inputList, buffer) {
             else {
                 input = outputList[equationMerge[2]];
             }
-            connect(input, new CONNECTION([0,0,0,0], [0,0,0,0]), module, 1);
+            connect(input, new CONNECTION([0, 0, 0, 0], [0, 0, 0, 0]), module, 1);
             input.checkActivated();
         }
     }
@@ -1305,7 +1329,7 @@ class Module {
         this.text = '';
         this.negation = false;
         this.value = false;
-        this.selected = false; //J.E.
+        this.selected = false;
         new ModuleManager().addModule(this);
     }
 
@@ -1330,7 +1354,7 @@ class Module {
     */
     calcOutputOffset(negation) {
         if (negation) {
-            this.outputOffset = [this.width, this.height / 2];//for old inverse output offset this.height / 2 + 5
+            this.outputOffset = [this.width + 5, this.height / 2];
         }
 
         else {
@@ -1378,11 +1402,11 @@ class Module {
             this.group.select("rect").attr("stroke", colorActive);
 
             this.group.append("circle")
-                .attr("cx", this.width)//for old output negation + 5
+                .attr("cx", this.width + 5)
                 .attr("cy", this.height / 2)
                 .attr("r", 5)
-                .attr("fill", "white")//for old negated output visualisation "transparent"
-                .attr("stroke", colorStandard);
+                .attr("fill", "transparent")
+                .attr("stroke", colorConnectionPoints);
         }
 
         for (var i = 0; i < this.maxOutputCount; i++)   // Creates output-circles
@@ -1394,7 +1418,7 @@ class Module {
                 .attr("fill", colorConnectionPoints)
                 .attr("stroke", "transparent")
                 .attr("stroke-width", this.sizeStrokeWidth)
-                .on("mouseover", function () { d3.select(this).attr("fill", colorActive).attr("stroke", colorActive) })
+                .on("mouseover", function () { d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", colorConnectionPoints) })
                 .on("mouseout", function () { d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", "transparent") })
                 .call(d3.drag()
                     .on("start", function () {
@@ -1437,7 +1461,7 @@ class Module {
         }
         this.group.selectAll(".input")
             .data(inputIndexList)
-            .on("mouseover", function (d) { new EventManager().setEventElement(thisElement, d); d3.select(this).attr("fill", colorActive).attr("stroke", colorActive) })
+            .on("mouseover", function (d) { new EventManager().setEventElement(thisElement, d); d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", colorConnectionPoints) })
             .on("mouseout", function (d) { new EventManager().setEventElement(null, d); d3.select(this).attr("fill", colorConnectionPoints).attr("stroke", "transparent") })//input[0]
 
         this.group.attr('transform', 'translate(' + this.x + ',' + this.y + ')');
@@ -1588,7 +1612,7 @@ class Module {
         for (var i = 0; i < thisElement.input.length && i < newModule.maxInputCount; i++) {
             for (var j = 0; j < thisElement.input[i].length; j++) {
                 var oldConnection = thisElement.input[i][j];
-                var newConnection = new CONNECTION([oldConnection.input.getX() + oldConnection.input.getOutputOffset()[0], oldConnection.input.getX() + oldConnection.input.getOutputOffset()[0], thisElement.getX() + thisElement.getInputOffset(i)[0] ,thisElement.getX() + thisElement.getInputOffset(i)[0]], [oldConnection.input.getY() + oldConnection.input.getOutputOffset()[1], oldConnection.input.getY() + oldConnection.input.getOutputOffset()[1], thisElement.getY() + thisElement.getInputOffset(i)[1], thisElement.getY() + thisElement.getInputOffset(i)[1]]);
+                var newConnection = new CONNECTION(oldConnection.gridPointsX, oldConnection.gridPointsY);
                 newConnection.setInput(oldConnection.input);
                 var value = false;
                 if (oldConnection.value) {
@@ -1600,7 +1624,7 @@ class Module {
         //outputs:
         for (var i = 0; i < thisElement.output.length && i < newModule.maxOutputCount; i++) {
             var oldConnection = thisElement.output[i];
-            var newConnection = new CONNECTION([newModule.x + newModule.getOutputOffset()[0], newModule.x + newModule.getOutputOffset()[0], oldConnection.output.getX() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[0], oldConnection.output.getX() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[0]], [newModule.y + newModule.getOutputOffset()[1], newModule.y + newModule.getOutputOffset()[1], oldConnection.output.getY() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[1], oldConnection.output.getY() + oldConnection.output.getInputOffset(oldConnection.outputInputIndex)[1]]);
+            var newConnection = new CONNECTION(oldConnection.gridPointsX, oldConnection.gridPointsY);
             connect(newModule, newConnection, oldConnection.output, oldConnection.outputInputIndex, 0);
         }
         newModule.checkActivated();
@@ -1662,9 +1686,7 @@ class Module {
         }
         this.maxInputCount = inputCount;
         this.maxOutputCount = 1;
-        this.width = 30;
         this.height = gridSize * (inputCount + (inputCount+1)%2 + 1);
-        this.calcOutputOffset(false);
         this.calcInputOffset();                            
     }
 }
@@ -1681,7 +1703,9 @@ class AND extends Logic {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y, inputCount);                            
+        super(x, y, inputCount);
+        this.width = 30;
+        this.calcOutputOffset(false);                            
         this.build("&", false);
         this.addsInputToArray();                                
     }
@@ -1717,7 +1741,9 @@ class NAND extends Logic {
      */
     constructor(x, y, inputCount)                        
     {
-        super(x, y, inputCount);                           
+        super(x, y, inputCount);
+        this.width = 25;
+        this.calcOutputOffset(true);                           
         this.build("&", true);
         this.addsInputToArray();                            
     }
@@ -1752,7 +1778,9 @@ class OR extends Logic {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y, inputCount);                           
+        super(x, y, inputCount);  
+        this.width = 30;
+        this.calcOutputOffset(false);                         
         this.build("≥1", false);
         this.addsInputToArray();                            
     }
@@ -1782,7 +1810,9 @@ class NOR extends Logic {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y, inputCount);                          
+        super(x, y, inputCount); 
+        this.width = 25;
+        this.calcOutputOffset(true);                         
         this.build("≥1", true);
         this.addsInputToArray();                            
     }
@@ -1817,7 +1847,9 @@ class XOR extends Logic {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y, inputCount);                           
+        super(x, y, inputCount);
+        this.width = 30;
+        this.calcOutputOffset(false);                           
         this.build("=1", false);
         this.addsInputToArray();                            
     }
@@ -1852,7 +1884,9 @@ class XOR extends Logic {
      */
     constructor(x, y, inputCount)                             
     {
-        super(x, y, inputCount);                           
+        super(x, y, inputCount);
+        this.width = 25; 
+        this.calcOutputOffset(true);                          
         this.build("=1", true);
         this.addsInputToArray();                            
     }
@@ -1889,7 +1923,7 @@ class NOT extends Module {
 
         this.maxInputCount = 1;
         this.maxOutputCount = 1;
-        this.width = 30;
+        this.width = 25;
         this.height = 30;
 
         this.calcOutputOffset(true);                        
@@ -2044,7 +2078,7 @@ class CONNECTION {
                 branchStartX = nextGridPoint(d3.mouse(this)[0]);
                 branchStartY = nextGridPoint(d3.mouse(this)[1]);
             })
-            .on("mouseover", function () { if (thisElement.output != null) { d3.select(this).attr("stroke-width", "4px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorConnectionPoints) } } })
+            .on("mouseover", function () { if (thisElement.output != null) { d3.select(this).attr("stroke-width", "4px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorStandard) } } })
             .on("mouseout", function () { d3.select(this).attr("stroke-width", "2px"); if (thisElement.value) { d3.select(this).attr("stroke", colorActive) } else { d3.select(this).attr("stroke", colorStandard) } })
             .on("contextmenu", function () { d3.event.preventDefault(); thisElement.delete(true) })
             .on("click", function () { if (globalDeleteActive) { thisElement.delete(true) } })
@@ -2082,9 +2116,11 @@ class CONNECTION {
      * @param {number} y target y coordinate
      */
     moveEnd(x, y) {
-        this.gridPointsX[this.gridPointsX.length - 1] = x;
-        this.gridPointsY[this.gridPointsY.length - 1] = y;
-        this.gridPointsY[2] = y;
+        if(this.gridPointsX[this.gridPointsX.length - 1] == 0) {
+            this.gridPointsX[this.gridPointsX.length - 1] = x;
+            this.gridPointsY[this.gridPointsY.length - 1] = y;
+            this.gridPointsY[2] = y;
+        }
         this.path.attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1]);
         this.path.moveToBack();
     }
@@ -2095,8 +2131,10 @@ class CONNECTION {
      * @param {number} y target y coordinate
      */
     moveStart(x, y) {
-        this.gridPointsX = [x, x + gridSize, x + gridSize, 0];
-        this.gridPointsY = [y, y, 0, 0];
+        if(this.gridPointsX[0] == 0) {
+            this.gridPointsX = [x, x + gridSize, x + gridSize, 0];
+            this.gridPointsY = [y, y, 0, 0];
+        }
         this.path.attr("d", "M" + this.gridPointsX[0] + " " + this.gridPointsY[0] + " L" + this.gridPointsX[1] + " " + this.gridPointsY[1] + " L" + this.gridPointsX[2] + " " + this.gridPointsY[2] + " L" + this.gridPointsX[this.gridPointsX.length - 1] + " " + this.gridPointsY[this.gridPointsY.length - 1]);
         this.path.moveToBack();
     }

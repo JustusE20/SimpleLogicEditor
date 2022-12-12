@@ -130,7 +130,7 @@ function changeOperator(input){ //Ersetzt die möglichen Eingaben für die Logik
 	replace = ["¬", "¬", "ᴧ", "ᴧ", "ᴠ", "↑", "↓", "↓", " ⊙ ", " ⊙ ", " ⊙ ", " ⊙ ", " ⊙ ", " ⊙ ", " ↑ ", " ↑ ", " ↑ ", " ᴧ ", " ᴧ ", " ᴧ ", " ↓ ", " ↓ ", " ↓ ", " ⊕ ", " ⊕ ", " ⊕ ", " ᴠ ", " ᴠ ", " ᴠ ", " ¬ ", " ¬ ", " ¬ "]
 
 	for(let i = 0; i < search.length;i++) {
-		res = res.replace(search[i], replace[i]);//" " + search[i] + " ", " " + replace[i] + " "
+		res = res.replace(search[i], replace[i]);
 	}
 	
 	return res;
