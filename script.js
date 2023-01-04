@@ -1967,7 +1967,7 @@ class OUTPUT extends Module {
         this.maxOutputCount = 0;
         this.input.push(new Array);
         this.width = ((name.length * 8) + 15);
-        this.height =  gridSize * (inputCount + (inputCount+1)%2 + 1);
+        this.height =  30;
 
         this.calcInputOffset();                             
         this.build(name, false);
